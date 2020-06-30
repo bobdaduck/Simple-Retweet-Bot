@@ -13,8 +13,8 @@ auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth, wait_on_rate_limit=True) # "api" variable now calls whatever twitter api you give it, like on line 17
 
 seconds_between_retweets = 5
-minimum_account_age = 7
-minimum_account_follower = 15
+minimum_account_age = 7 #in days
+minimum_account_follower = 15 #in followers
 
 def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
@@ -22,9 +22,11 @@ def meetsRetweetConditions(tweet): #filter out trolls
 
     account_age = datetime.datetime.now() - tweet.user.created_at
     if account_age.days < minimum_account_age: #less than a week old
+        print(tweet.user.screen_name + "new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
         return False
 
     if tweet.user.followers_count < minimum_account_follower: #fewer than 15 followers
+        print(tweet.user.screen_name + "new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
         return False
  
     return True
@@ -44,12 +46,9 @@ while True: #run infinitely until aborted
                             tweet.retweet() #if its already retweeted, this gives 327 error and moves on
                             print('\nretweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
                             sleep(seconds_between_retweets) #halt bot process for 10 seconds
-                        else:
-                            #go to any tweet and paste the ID into your url over the last part, it'll take you to the right tweet
-                            print(tweet.user.screen_name + "blocked, new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
                     else:
                         pass #print("Not an original tweet")
-                else:
+                elif(tweet.user.id not in blocked_users):
                     print(tweet.user.screen_name + "is replying to a troll, skipping.  tweet ID: " + str(tweet.id))
                     pass #print(str(tweet.user.screen_name) + " FOUND ON BLOCK LIST, IGNORE HIM")
         
