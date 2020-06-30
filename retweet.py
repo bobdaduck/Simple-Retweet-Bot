@@ -14,8 +14,6 @@ seconds_between_retweets = 5
 minimum_account_age = 7
 minimum_account_follower = 15
 
-blocked_users = api.blocks_ids()  
-
 def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
         return False
@@ -31,6 +29,7 @@ def meetsRetweetConditions(tweet): #filter out trolls
 
 searched_store = [] #cut down on log printing after first iteration by memorizing what we've retweeted
 while True: #run infinitely until aborted
+    blocked_users = api.blocks_ids()
     for tweet in tweepy.Cursor(api.search, q='#DezNat OR #deznat OR #Deznat', count=100).items(100): #q= search query, items = max items to try
         try:
             if(tweet.id not in searched_store): #save CPU time if we already saw this since last time we started the bot
