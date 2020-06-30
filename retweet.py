@@ -1,5 +1,7 @@
 # DezNat Retweet bot for Twitter, using Python and Tweepy.
 # by bobdaduck, modifying "simple retweet bot"'s source on github.Author: Tyler L. Jones || CyberVox
+# Resources: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
+# http://docs.tweepy.org/en/latest/api.html?highlight=search
 
 import tweepy #let python handle the twitter api stuff
 import datetime
@@ -34,7 +36,7 @@ while True: #run infinitely until aborted
         try:
             if(tweet.id not in searched_store): #save CPU time if we already saw this since last time we started the bot
                 searched_store.append(tweet.id)
-                if(tweet.user.id not in blocked_users): #probably redundant to meetsRetweetConditions() but idc
+                if(tweet.in_reply_to_user_id not in blocked_users): #don't drag us into your nonsense
                     if(hasattr(tweet, "retweeted_status") == False): #tweet is an original tweet
                         print("new tweet found by " + tweet.user.screen_name + ", tweet ID: " + str(tweet.id))
                         #print("has attribute retweeted status: " + str(hasattr(tweet, "retweeted_status")))
@@ -43,10 +45,12 @@ while True: #run infinitely until aborted
                             print('\nretweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
                             sleep(seconds_between_retweets) #halt bot process for 10 seconds
                         else:
+                            #go to any tweet and paste the ID into your url over the last part, it'll take you to the right tweet
                             print(tweet.user.screen_name + "blocked, new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
                     else:
                         pass #print("Not an original tweet")
                 else:
+                    print(tweet.user.screen_name + "is replying to a troll, skipping.  tweet ID: " + str(tweet.id))
                     pass #print(str(tweet.user.screen_name) + " FOUND ON BLOCK LIST, IGNORE HIM")
         
         except tweepy.TweepError as error:
