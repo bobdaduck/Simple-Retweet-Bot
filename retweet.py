@@ -1,62 +1,46 @@
-# Retweet bot for Twitter, using Python and Tweepy.
-# Search query via hashtag or keyword.
-# Author: Tyler L. Jones || CyberVox
-# Date: Saturday, May 20th - 2017.
-# License: MIT License.
+# DezNat Retweet bot for Twitter, using Python and Tweepy.
+# by bobdaduck, modifying "simple retweet bot"'s source on github.Author: Tyler L. Jones || CyberVox
 
-import tweepy
+import tweepy #let python handle the twitter api stuff
 import datetime
 from time import sleep
-# Import in your Twitter application keys, tokens, and secrets.
-# Make sure your keys.py file lives in the same directory as this .py file.
 from keys import *
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
-api = tweepy.API(auth, wait_on_rate_limit=True)
+api = tweepy.API(auth, wait_on_rate_limit=True) # "api" variable now calls whatever twitter api you give it, like on line 17
 
-hashtag = '#DezNat'
-# amount of tweets fetched per call and seconds between retweets
-maximum_tweets_per_call = 12
 seconds_between_retweets = 5
-# debug mode no retweets send to account
-testing = True
-# account threshold
 minimum_account_age = 7
 minimum_account_follower = 15
-date_since = "2020-06-21"
 
-blocked_users = api.blocks_ids() 
+blocked_users = api.blocks_ids()  
 
-def meetsRetweetConditions(tweet): #Not blocked, new, or low-clout
+def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
         return False
 
     account_age = datetime.datetime.now() - tweet.user.created_at
-    if account_age.days < minimum_account_age:
+    if account_age.days < minimum_account_age: #less than a week old
         return False
 
-    if tweet.user.followers_count < minimum_account_follower:
+    if tweet.user.followers_count < minimum_account_follower: #fewer than 15 followers
         return False
-
+ 
     return True
 
-last_id = "1273780338662178816" #some tweet on July 19th just to keep things recent
-last_date = ""
-searched_store = []
-while True:
-
+searched_store = [] #cut down on log printing after first iteration by memorizing what we've retweeted
+while True: #run infinitely until aborted
     for tweet in tweepy.Cursor(api.search, q='#DezNat OR #deznat OR #Deznat', count=100).items(100): #q= search query, items = max items to try
-       
-        #print("now more recent than " + str(last_date))
         try:
             if(tweet.id not in searched_store): #save CPU time if we already saw this since last time we started the bot
                 searched_store.append(tweet.id)
-                if(tweet.user.id not in blocked_users): 
+                if(tweet.user.id not in blocked_users): #probably redundant to meetsRetweetConditions() but idc
                     if(hasattr(tweet, "retweeted_status") == False): #tweet is an original tweet
+                        print("new tweet found by " + tweet.user.screen_name + ", tweet ID: " + str(tweet.id))
                         #print("has attribute retweeted status: " + str(hasattr(tweet, "retweeted_status")))
                         if(meetsRetweetConditions(tweet)): #Not blocked, new, or low-clout
-                            tweet.retweet()
+                            tweet.retweet() #if its already retweeted, this gives 327 error and moves on
                             print('\nretweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
                             sleep(seconds_between_retweets) #halt bot process for 10 seconds
                         else:
@@ -67,14 +51,14 @@ while True:
                     pass #print(str(tweet.user.screen_name) + " FOUND ON BLOCK LIST, IGNORE HIM")
         
         except tweepy.TweepError as error:
-            if("327" not in error.reason):
+            if("327" not in error.reason): #327 = already retweeted.  
                 print('\nError. Retweet not successful: ' + error.reason)
             else:
                 pass #already retweeted error
         except StopIteration:
             break
     print("loop finished, waiting to retry")
-    sleep(120) #halt bot process for 60 seconds
+    sleep(120) #halt bot process for X seconds
 
 
 
