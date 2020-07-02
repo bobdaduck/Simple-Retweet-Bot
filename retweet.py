@@ -20,13 +20,18 @@ def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
         return False
 
+    if tweet.user.id in muted_users:
+        return False
+
     account_age = datetime.datetime.now() - tweet.user.created_at
     if account_age.days < minimum_account_age: #less than a week old
         print(tweet.user.screen_name + "new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
+        print(tweet.text)
         return False
 
     if tweet.user.followers_count < minimum_account_follower: #fewer than 15 followers
         print(tweet.user.screen_name + "new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
+        print(tweet.text)
         return False
  
     return True
@@ -34,24 +39,29 @@ def meetsRetweetConditions(tweet): #filter out trolls
 searched_store = [] #cut down on log printing after first iteration by memorizing what we've retweeted
 while True: #run infinitely until aborted
     blocked_users = api.blocks_ids()
+    muted_users = api.mutes_ids()
     for tweet in tweepy.Cursor(api.search, q='#DezNat OR #deznat OR #Deznat', count=100).items(100): #q= search query, items = max items to try
         try:
             if(tweet.id not in searched_store): #save CPU time if we already saw this since last time we started the bot
                 searched_store.append(tweet.id)
-                if(tweet.in_reply_to_user_id not in blocked_users): #don't drag us into your nonsense
+                if(tweet.in_reply_to_user_id not in blocked_users and tweet.in_reply_to_user_id not in muted_users): #don't drag us into your nonsense
                     if(hasattr(tweet, "retweeted_status") == False): #tweet is an original tweet
-                        print("new tweet found by " + tweet.user.screen_name + ", tweet ID: " + str(tweet.id))
+                        #print("new tweet found by " + tweet.user.screen_name + ", tweet ID: " + str(tweet.id))
                         #print("has attribute retweeted status: " + str(hasattr(tweet, "retweeted_status")))
                         if(meetsRetweetConditions(tweet)): #Not blocked, new, or low-clout
                             tweet.retweet() #if its already retweeted, this gives 327 error and moves on
                             print('\nretweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
+                            print(tweet.text)
                             sleep(seconds_between_retweets) #halt bot process for 10 seconds
+                        else:
+                            pass
                     else:
                         pass #print("Not an original tweet")
-                elif(tweet.user.id not in blocked_users):
+                elif(tweet.user.id not in blocked_users and tweet.user.id not in muted_users):
                     print(tweet.user.screen_name + "is replying to a troll, skipping.  tweet ID: " + str(tweet.id))
                     pass #print(str(tweet.user.screen_name) + " FOUND ON BLOCK LIST, IGNORE HIM")
-        
+                else:
+                    pass
         except tweepy.TweepError as error:
             if("327" not in error.reason): #327 = already retweeted.  
                 print('\nError. Retweet not successful: ' + error.reason)
