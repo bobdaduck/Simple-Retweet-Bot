@@ -25,13 +25,13 @@ def meetsRetweetConditions(tweet): #filter out trolls
 
     account_age = datetime.datetime.now() - tweet.user.created_at
     if account_age.days < minimum_account_age: #less than a week old
-        print(tweet.user.screen_name + "new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
-        print(tweet.text)
+        print(tweet.user.screen_name + " new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
+        print(tweet.text+ "\n") #/n just means newline
         return False
 
     if tweet.user.followers_count < minimum_account_follower: #fewer than 15 followers
-        print(tweet.user.screen_name + "new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
-        print(tweet.text)
+        print(tweet.user.screen_name + " new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
+        print(tweet.text + "\n")
         return False
  
     return True
@@ -50,15 +50,15 @@ while True: #run infinitely until aborted
                         #print("has attribute retweeted status: " + str(hasattr(tweet, "retweeted_status")))
                         if(meetsRetweetConditions(tweet)): #Not blocked, new, or low-clout
                             tweet.retweet() #if its already retweeted, this gives 327 error and moves on
-                            print('\nretweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
-                            print(tweet.text)
+                            print('retweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
+                            print(tweet.text  + "\n")
                             sleep(seconds_between_retweets) #halt bot process for 10 seconds
                         else:
                             pass
                     else:
                         pass #print("Not an original tweet")
                 elif(tweet.user.id not in blocked_users and tweet.user.id not in muted_users):
-                    print(tweet.user.screen_name + "is replying to a troll, skipping.  tweet ID: " + str(tweet.id))
+                    print(tweet.user.screen_name + " is replying to a troll, skipping.  tweet ID: " + str(tweet.id) + "\n") #/n just means newline
                     pass #print(str(tweet.user.screen_name) + " FOUND ON BLOCK LIST, IGNORE HIM")
                 else:
                     pass
