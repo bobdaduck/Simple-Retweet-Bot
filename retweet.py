@@ -34,6 +34,14 @@ def meetsRetweetConditions(tweet): #filter out trolls
         print(tweet.text + "\n")
         return False
  
+    replyTo = tweet.in_reply_to_status_id
+    replyText = ""
+    if(replyTo is not None):
+        replyText = str(api.get_status(replyTo).text).lower() #don't retweet every hashtag in a 50 tweet thread where all have the hashtag
+        if('#deznat' in replyText):
+            print("above tweet already tagged #DezNat, skipping: " + str(tweet.id))
+            print(tweet.text + "\n")
+            return False
     return True
 
 searched_store = [] #cut down on log printing after first iteration by memorizing what we've retweeted
