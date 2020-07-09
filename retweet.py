@@ -14,7 +14,7 @@ api = tweepy.API(auth, wait_on_rate_limit=True) # "api" variable now calls whate
 
 seconds_between_retweets = 5
 minimum_account_age = 7 #in days
-minimum_account_follower = 15 #in followers
+minimum_account_follower = 40 #in followers
 
 def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
@@ -25,12 +25,12 @@ def meetsRetweetConditions(tweet): #filter out trolls
 
     account_age = datetime.datetime.now() - tweet.user.created_at
     if account_age.days < minimum_account_age: #less than a week old
-        print(tweet.user.screen_name + " new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
+        print("@" + tweet.user.screen_name + " new or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
         print(tweet.text+ "\n") #/n just means newline
         return False
 
     if tweet.user.followers_count < minimum_account_follower: #fewer than 15 followers
-        print(tweet.user.screen_name + " new, or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
+        print("@" + tweet.user.screen_name + " new or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
         print(tweet.text + "\n")
         return False
  
