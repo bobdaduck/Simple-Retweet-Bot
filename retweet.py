@@ -39,12 +39,24 @@ def isGreenFlaggedAccount(tweet):
 
 def containsRedFlagWords(tweet):
     fullText = str(api.get_status(tweet.id, tweet_mode="extended").full_text).lower()
-    if('#exmormon' in fullText or 'mormons' in fullText or 'the mormons' in fullText or 'deznats' in fullText):
+    if('#exmormon' in fullText or '#exmo' in fullText or ' mormons' in fullText or 'deznats' in fullText or 'deeznuts' in fullText or 'a mormon' in fullText):
         return True
     elif('#nacdes' in fullText): #fine but spammy
         return True
     else:
         return False
+
+def isNotAThread(tweet):
+    replyTo = tweet.in_reply_to_status_id
+    replyText = ""
+    if(replyTo is not None):#don't retweet every hashtag in a 50 tweet thread where all have the hashtag
+        
+        replyText = str(api.get_status(replyTo, tweet_mode="extended").full_text).lower() #"extended" gets full text rather than 40 chars of each tweet
+        if('#deznat' in replyText):
+            print("above tweet already tagged #DezNat, skipping @" + tweet.user.screen_name + "'s tweet: " + str(tweet.id))
+            print(replyText + "\n")
+            return False
+    return True
 
 def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
@@ -54,7 +66,7 @@ def meetsRetweetConditions(tweet): #filter out trolls
         return False
 
     if(containsRedFlagWords(tweet)):
-        print("~~~~~~~@" + tweet.user.screen_name + " using no-no language. Tweet ID (to paste): " + str(tweet.id) + "~~~~~")
+        print("~~~~~~~ @" + tweet.user.screen_name + " using no-no language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
         return False
 
     if(not isGreenFlaggedAccount(tweet)):
@@ -69,16 +81,7 @@ def meetsRetweetConditions(tweet): #filter out trolls
             print(tweet.text + "\n")
             return False
     
-        replyTo = tweet.in_reply_to_status_id
-        replyText = ""
-        if(replyTo is not None):#don't retweet every hashtag in a 50 tweet thread where all have the hashtag
-            
-            replyText = str(api.get_status(replyTo, tweet_mode="extended").full_text).lower() #"extended" gets full text rather than 40 chars of each tweet
-            if('#deznat' in replyText):
-                print("above tweet already tagged #DezNat, skipping @" + tweet.user.screen_name + "'s tweet: " + str(tweet.id))
-                print(replyText + "\n")
-                return False
-        return True
+    return True
 
 following_list = []
 searched_store = [] #cut down on log printing after first iteration by memorizing what we've retweeted
@@ -94,13 +97,13 @@ while True: #run infinitely until aborted
                     if(hasattr(tweet, "retweeted_status") == False): #tweet is an original tweet
                         #print("new tweet found by " + tweet.user.screen_name + ", tweet ID: " + str(tweet.id))
                         #print("has attribute retweeted status: " + str(hasattr(tweet, "retweeted_status")))
-                        if(meetsRetweetConditions(tweet)): #Not blocked, new, or low-clout
+                        if(meetsRetweetConditions(tweet) and isNotAThread(tweet)): #Not blocked, new, or low-clout
                             tweet.retweet() #if its already retweeted, this gives 327 error and moves on
                             print('retweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
                             print(tweet.text  + "\n")
                             incremintMetrics(tweet)
                             sleep(seconds_between_retweets) #halt bot process for 10 seconds
-                        elif(isGreenFlaggedAccount(tweet)):
+                        elif(isGreenFlaggedAccount(tweet) and isNotAThread(tweet)):
                             tweet.retweet() #if its already retweeted, this gives 327 error and moves on
                             print("\n- - - - @" + tweet.user.screen_name + " is a low follower account we've greenflagged- - - -")
                             print('retweeted tweet by @' + tweet.user.screen_name + '. Tweet ID: ' + str(tweet.id))
@@ -117,9 +120,12 @@ while True: #run infinitely until aborted
                 else:
                     pass
         except tweepy.TweepError as error:
-            if("327" not in error.reason): #327 = already retweeted.  
+            print(error.api_code)  #503 = server down+66666666+66666666+
+            if("327" not in error.reason): #327 = already retweeted.
+                print(error.api_code)  
                 print('\n~~~~Error. Retweet for @' + tweet.user.screen_name + ' failed: ' + error.reason)
                 print('tweet ID: ' + str(tweet.id))
+            
             else:
                 pass #already retweeted error
         except StopIteration:
