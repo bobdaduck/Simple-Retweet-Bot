@@ -24,6 +24,7 @@ uniqueAuthors = 0
 uniqueTweets = 0
 timesLooped = 0
 blockedAttempts = 0
+mutedReplies = 0
 repliesToTrolls = 0
 sessionDate = str(datetime.datetime.now())
 
@@ -44,7 +45,8 @@ def isGreenFlaggedAccount(tweet):
 
 def containsRedFlagWords(tweet):
     fullText = str(api.get_status(tweet.id, tweet_mode="extended").full_text).lower()
-    if('#exmormon' in fullText or '#exmo' in fullText or ' mormons' in fullText or 'deznats' in fullText or 'deeznuts' in fullText or 'a mormon' in fullText):
+    if('#exmormon' in fullText or '#exmo' in fullText or ' mormons' in fullText or 'deznats' in fullText or 'nuts' in fullText or 'deez' in fullText or 'a mormon' in fullText):
+        global blockedAttempts
         blockedAttempts = blockedAttempts + 1
         return True
     else:
@@ -62,7 +64,10 @@ def containsYellowFlagWords(tweet):   #fine but spammy
         return True
     else:
         return False
-
+def containsRedFlagBio(tweet):
+    bio = tweet.user.description
+    if("utes" in bio or "jazz" in bio):
+        return False
 def isNotAThread(tweet):
     replyTo = tweet.in_reply_to_status_id
     replyText = ""
@@ -70,36 +75,36 @@ def isNotAThread(tweet):
         
         replyText = str(api.get_status(replyTo, tweet_mode="extended").full_text).lower() #"extended" gets full text rather than 40 chars of each tweet
         if('#deznat' in replyText):
-            print("above tweet already tagged #DezNat, skipping @" + tweet.user.screen_name + "'s tweet: " + str(tweet.id))
-            print(replyText + "\n")
+            #print("above tweet already tagged #DezNat, skipping @" + tweet.user.screen_name + "'s tweet: " + str(tweet.id))
+            #print(replyText + "\n")
             return False
     return True
 
 def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
         return False
-
     if tweet.user.id in muted_users:
         return False
     
-    if(containsRedFlagWords(tweet)):
-        print("~~~~~~~ @" + tweet.user.screen_name + " using red flag language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
-        return False
-
-    if(containsYellowFlagWords(tweet)):
-        print("~~~~~~~ @" + tweet.user.screen_name + " using yellow flag language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
-        return False
-        
     if(not isGreenFlaggedAccount(tweet)):
         account_age = datetime.datetime.now() - tweet.user.created_at
         if account_age.days < minimum_account_age: #less than a week old
             print("~~~~~~~@" + tweet.user.screen_name + " new or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
             print(tweet.text+ "\n") #/n just means newline
             return False
-
         if tweet.user.followers_count < minimum_account_follower: #fewer than 40 followers
             print("~~~~~~~@" + tweet.user.screen_name + " new or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
             print(tweet.text + "\n")
+            return False
+        if(containsRedFlagWords(tweet)):
+            print("~~~~~~~ @" + tweet.user.screen_name + " using red flag language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
+            return False
+        if(containsYellowFlagWords(tweet)):
+            print("~~~~~~~ @" + tweet.user.screen_name + " using yellow flag language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
+            return False
+        if(containsRedFlagBio(tweet)):
+            print("~~~~~~~ @" + tweet.user.screen_name + "otherwise fine but has red flags in Bio: Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
+            mutedReplies += 1
             return False
     
     return True
@@ -124,17 +129,20 @@ def EvaluateAndRetweet(tweet):
                     print(tweet.text  + "\n")
                     incremintMetrics(tweet)
                     sleep(seconds_between_retweets) #halt bot process for 10 seconds
-                else:
-                    pass
-            else:
-                pass #print("Not an original tweet")
+                elif(tweet.user.id in muted_users):
+                    global mutedReplies
+                    mutedReplies = mutedReplies + 1
+                    print("!!!!!!!!!!!!!" + tweet.user.screen_name + " is muted.  Consider blocking or unmuting. tweet ID: " + str(tweet.id) + " !!!!!!!!\n")
+                elif(tweet.user.id in blocked_users):
+                    global blockedAttempts
+                    blockedAttempts = blockedAttempts + 1
+                    #print(tweet.user.screen_name + " is blocked")
+        
         elif(tweet.user.id not in blocked_users and tweet.user.id not in muted_users):
+            global repliesToTrolls
             repliesToTrolls = repliesToTrolls + 1
-            print(tweet.user.screen_name + " is replying to a troll, skipping.  tweet ID: " + str(tweet.id) + "\n") #/n just means newline
+            #print(tweet.user.screen_name + " is replying to a troll, skipping.  tweet ID: " + str(tweet.id) + "\n") #/n just means newline
             pass #print(str(tweet.user.screen_name) + " FOUND ON BLOCK LIST, IGNORE HIM")
-        else:
-            blockedAttempts = blockedAttempts + 1
-            pass
 following_list = []
 searched_store = [] #cut down on log printing after first iteration by memorizing what we've retweeted
 
@@ -150,19 +158,22 @@ while True: #run infinitely until aborted
         try:
             EvaluateAndRetweet(tweet)
         except tweepy.TweepError as error:
-            print(error.api_code)  #503 = server down
-            if("327" not in error.reason): #327 = already retweeted.
-                print(error.api_code)  
-                print('\n~~~~Error. Retweet for @' + tweet.user.screen_name + ' failed: ' + error.reason)
-                print('tweet ID: ' + str(tweet.id))
+            errCode = error.api_code
+            if(errCode == 327): #327 = already retweeted. #503 = server down
+                pass
+            elif(errCode == 136):
+                print(tweet.user.screen_name + " has blocked us, consider blocking back to cut down on these messages (ID:) " + str(tweet.id))
+                #this part also is triggered if the reply tweet is blocked, idk
             else:
-                pass #already retweeted error
+                print(error.api_code)  
+                print('\n%%%%%%%Error. Retweet for @' + tweet.user.screen_name + ' failed: ' + error.reason)
+                print('tweet ID: ' + str(tweet.id))
         except StopIteration:
             break
     print("loop finished, waiting to retry. Since startup, " + str(uniqueAuthors) + " unique authors and " + str(uniqueTweets) + " retweets")
 
     lines = open('trends.csv').read().splitlines()
-    lines[-1] =  sessionDate + ", " + str(uniqueAuthors) + ", " + str(uniqueTweets)+ ", " + str(timesLooped) + ", " + str(blockedAttempts) + ", " + str(repliesToTrolls)
+    lines[-1] =  sessionDate + ", " + str(uniqueAuthors) + ", " + str(uniqueTweets)+ ", " + str(timesLooped) + ", " + str(blockedAttempts) + ", " + str(repliesToTrolls) + ", " + str(mutedReplies)
     open('trends.csv','w').write('\n'.join(lines))
     
     timesLooped = timesLooped + 1
