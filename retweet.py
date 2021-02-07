@@ -66,7 +66,7 @@ def containsYellowFlagWords(tweet):   #fine but spammy
         return False
 def containsRedFlagBio(tweet):
     bio = tweet.user.description.lower()
-    if("utes" in bio or "jazz" in bio or "exmo" in bio or "he/him" in bio or "she/her" in bio or "they/them" in bio or "feminist" in bio or "queer" in bio or " ally" in bio or "onlyfans" in bio):
+    if("utes" in bio or "jazz" in bio or "takenote" in bio or "exmo" in bio or "he/him" in bio or "she/her" in bio or "they/them" in bio or "feminist" in bio or "queer" in bio or " ally" in bio or "onlyfans" in bio):
         return True
 def isNotAThread(tweet):
     replyTo = tweet.in_reply_to_status_id
@@ -79,13 +79,25 @@ def isNotAThread(tweet):
             #print(replyText + "\n")
             return False
     return True
+def blockedAccountsInReplies(tweet):
+    replyTo = tweet.in_reply_to_status_id
+    if(replyTo is not None):#don't retweet every hashtag in a 50 tweet thread where all have the hashtag
+        if(hasattr(replyTo, 'in_reply_to_user_id')):
+            if(replyTo.in_reply_to_user_id in blocked_users or replyTo.in_reply_to_user_id  in muted_users):
+                return True
+            else:
+                if(blockedAccountsInReplies(replyTo)): #this calls itself recursively until there's no reply above (which would return false)
+                    return True
+    return False
 
 def meetsRetweetConditions(tweet): #filter out trolls
     if tweet.user.id in blocked_users:
         return False
     if tweet.user.id in muted_users:
         return False
-    
+    if(blockedAccountsInReplies(tweet)):
+        print(tweet.user.screen_name + " is replying to a troll, skipping.  tweet ID: " + str(tweet.id) + "\n")
+        return False
     if(not isGreenFlaggedAccount(tweet)):
         account_age = datetime.datetime.now() - tweet.user.created_at
         if account_age.days < minimum_account_age: #less than a week old
