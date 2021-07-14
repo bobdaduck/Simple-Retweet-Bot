@@ -45,7 +45,7 @@ def isGreenFlaggedAccount(tweet):
 
 def containsRedFlagWords(tweet):
     fullText = str(api.get_status(tweet.id, tweet_mode="extended").full_text).lower()
-    if('#exmormon' in fullText or '#exmo' in fullText or ' mormons' in fullText or 'deznats' in fullText or 'nuts' in fullText or 'deez' in fullText or 'a mormon' in fullText or 'blocked me' in fullText):
+    if('#exmormon' in fullText or '#exmo' in fullText or ' mormons' in fullText or 'deznats' in fullText or 'nuts' in fullText or 'deez' in fullText or 'a mormon' in fullText or 'blocked me' in fullText or ' crowd' in fullText or 'exposedeznat' in fullText):
         global blockedAttempts
         blockedAttempts = blockedAttempts + 1
         return True
@@ -66,7 +66,7 @@ def containsYellowFlagWords(tweet):   #fine but spammy
         return False
 def containsRedFlagBio(tweet):
     bio = tweet.user.description.lower()
-    if("utes" in bio or "jazz" in bio or "takenote" in bio or "exmo" in bio or "he/him" in bio or "she/her" in bio or "they/them" in bio or "feminist" in bio or "queer" in bio or " ally" in bio or "onlyfans" in bio):
+    if("utes" in bio or "jazz" in bio or "takenote" in bio or "exmo" in bio or "he/him" in bio or "she/her" in bio or "they/them" in bio or "feminist" in bio or "queer" in bio or " ally" in bio or "onlyfans" in bio or "blm" in bio or "antifa" in bio or "acab" in bio):
         return True
 def isNotAThread(tweet):
     replyTo = tweet.in_reply_to_status_id
@@ -83,7 +83,7 @@ def blockedAccountsInReplies(tweet):
     replyTo = tweet.in_reply_to_status_id
     if(replyTo is not None):#don't retweet every hashtag in a 50 tweet thread where all have the hashtag
         if(hasattr(replyTo, 'in_reply_to_user_id')):
-            if(replyTo.in_reply_to_user_id in blocked_users or replyTo.in_reply_to_user_id  in muted_users):
+            if(replyTo.in_reply_to_user_id in blocked_users or replyTo.in_reply_to_user_id in muted_users):
                 return True
             else:
                 if(blockedAccountsInReplies(replyTo)): #this calls itself recursively until there's no reply above (which would return false)
@@ -103,16 +103,19 @@ def meetsRetweetConditions(tweet): #filter out trolls
         if account_age.days < minimum_account_age: #less than a week old
             print("~~~~~~~@" + tweet.user.screen_name + "\a new or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
             print(tweet.text+ "\n") #/n just means newline
+            incremintMetrics(tweet)
             return False
         if tweet.user.followers_count < minimum_account_follower: #fewer than 40 followers
             print("~~~~~~~@" + tweet.user.screen_name + "\a new or low-clout.  Evaluate and RT manually.  Tweet ID (to paste): " + str(tweet.id))
             print(tweet.text + "\n")
+            incremintMetrics(tweet)
             return False
         if(containsRedFlagWords(tweet)):
             print("~~~~~~~ @" + tweet.user.screen_name + "\a using red flag language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
             return False
         if(containsYellowFlagWords(tweet)):
             print("~~~~~~~ @" + tweet.user.screen_name + "\a using yellow flag language. Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
+            incremintMetrics(tweet)
             return False
         if(containsRedFlagBio(tweet)):
             print("~~~~~~~ @" + tweet.user.screen_name + "\a otherwise fine but has red flags in Bio: Tweet ID (to paste): " + str(tweet.id) + " ~~~~~")
